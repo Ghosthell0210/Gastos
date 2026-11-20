@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "Expense": {
+      "title": "Expense",
+      "description": "A categorized expense entry recorded in CUP by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "title": { "type": "string", "description": "Short title or merchant description." },
+        "amount": { "type": "number", "description": "Expense amount in CUP (> 0)." },
+        "categoryId": { "type": "string", "description": "Category identifier." },
+        "categoryName": { "type": "string", "description": "Display name of the category." },
+        "expenseDateMillis": { "type": "integer", "description": "Local epoch millis of the expense." },
+        "yearMonth": { "type": "string", "description": "Month key in YYYY-MM format." },
+        "note": { "type": "string", "description": "Optional note." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "title", "amount", "categoryId", "categoryName", "expenseDateMillis", "yearMonth", "createdAt", "updatedAt"]
+    },
+    "Debt": {
+      "title": "Debt",
+      "description": "A bi-directional debt record (I_OWE or OWED_TO_ME) in CUP.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "direction": { "type": "string", "enum": ["OWED_TO_ME", "I_OWE"], "description": "Whether someone owes the user or the user owes someone." },
+        "counterparty": { "type": "string", "description": "Name of person or entity." },
+        "concept": { "type": "string", "description": "Reason or description of the debt." },
+        "totalAmount": { "type": "number", "description": "Original total debt amount in CUP." },
+        "paidAmount": { "type": "number", "description": "Cumulative amount paid so far in CUP." },
+        "status": { "type": "string", "enum": ["PENDING", "SETTLED"], "description": "Current settlement status." },
+        "dueDateMillis": { "type": "integer", "description": "Optional due date epoch millis." },
+        "yearMonth": { "type": "string", "description": "Month key in YYYY-MM format." },
+        "note": { "type": "string", "description": "Optional note." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "direction", "counterparty", "concept", "totalAmount", "paidAmount", "status", "yearMonth", "createdAt", "updatedAt"]
+    },
+    "DebtPayment": {
+      "title": "DebtPayment",
+      "description": "An installment or partial payment applied to a debt.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "amount": { "type": "number", "description": "Payment amount in CUP (> 0)." },
+        "paymentDateMillis": { "type": "integer", "description": "Epoch millis when payment occurred." },
+        "note": { "type": "string", "description": "Optional payment note." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "amount", "paymentDateMillis", "createdAt"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Monthly spending cap for a specific category in CUP.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "categoryId": { "type": "string", "description": "Target category identifier." },
+        "categoryName": { "type": "string", "description": "Display name of the category." },
+        "yearMonth": { "type": "string", "description": "Month key in YYYY-MM format." },
+        "limitAmount": { "type": "number", "description": "Maximum monthly spending limit in CUP (> 0)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "categoryId", "categoryName", "yearMonth", "limitAmount", "createdAt", "updatedAt"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "Scheduled notification reminder for a debt due date or weekly/monthly expense review.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "title": { "type": "string", "description": "Notification title." },
+        "reminderType": { "type": "string", "enum": ["DEBT_DUE", "EXPENSE_REVIEW"], "description": "Reminder target type." },
+        "targetId": { "type": "string", "description": "Optional debtId or categoryId." },
+        "targetName": { "type": "string", "description": "Debt name or expense category name included in notification." },
+        "frequency": { "type": "string", "enum": ["ONCE", "WEEKLY", "MONTHLY"], "description": "Recurrence frequency." },
+        "scheduledAtMillis": { "type": "integer", "description": "Scheduled notification trigger time in epoch millis." },
+        "enabled": { "type": "boolean", "description": "Whether the reminder is active." },
+        "note": { "type": "string", "description": "Optional custom message." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "title", "reminderType", "targetName", "frequency", "scheduledAtMillis", "enabled", "createdAt", "updatedAt"]
+    },
+    "CustomCategory": {
+      "title": "CustomCategory",
+      "description": "User-defined expense category.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "name": { "type": "string", "description": "Category display name." },
+        "iconKey": { "type": "string", "description": "Icon identifier key." },
+        "colorHex": { "type": "string", "description": "Hex color code (#RRGGBB)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "name", "iconKey", "colorHex", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "User-scoped expenses collection."
+    },
+    "/users/{userId}/debts/{debtId}": {
+      "schema": { "$ref": "#/entities/Debt" },
+      "description": "User-scoped debts collection."
+    },
+    "/users/{userId}/debts/{debtId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/DebtPayment" },
+      "description": "Installment payments subcollection for a specific debt."
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "Monthly category budgets for a user."
+    },
+    "/users/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/Reminder" },
+      "description": "User-scoped customizable reminder schedules."
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/CustomCategory" },
+      "description": "User-defined custom expense categories."
+    }
+  }
+}

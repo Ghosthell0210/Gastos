@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Wallet body centered inside safe zone (x: 28..80, y: 31..77) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,34h36c3.31,0 6,2.69 6,6v5H58c-3.87,0 -7,3.13 -7,7v4c0,3.87 3.13,7 7,7h18v5c0,3.31 -2.69,6 -6,6H34c-3.31,0 -6,-2.69 -6,-6V40c0,-3.31 2.69,-6 6,-6z" />
+    <!-- Wallet clasp tab -->
+    <path
+        android:fillColor="#A7F3D0"
+        android:pathData="M58,48h20c1.66,0 3,1.34 3,3v6c0,1.66 -1.34,3 -3,3H58c-2.21,0 -4,-1.79 -4,-4v-4c0,-2.21 1.79,-4 4,-4z" />
+    <!-- Clasp dot -->
+    <path
+        android:fillColor="#064E3B"
+        android:pathData="M61,54m-2.5,0a2.5,2.5 0 1,0 5,0a2.5,2.5 0 1,0 -5,0" />
+    <!-- Rising chart bars accent in top-left of card -->
+    <path
+        android:fillColor="#059669"
+        android:pathData="M35,59h4v9h-4zM42,54h4v14h-4zM49,49h4v19h-4z" />
+</vector>

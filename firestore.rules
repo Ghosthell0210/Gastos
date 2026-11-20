@@ -1,0 +1,223 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny all reads and writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidYearMonth(ym) {
+      return ym is string && ym.matches('^[0-9]{4}-[0-9]{2}$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidExpense(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+             data.amount is number && data.amount > 0 && data.amount <= 1000000000 &&
+             data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 64 &&
+             data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 40 &&
+             data.expenseDateMillis is int && data.expenseDateMillis > 0 &&
+             isValidYearMonth(data.yearMonth) &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 300)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDebt(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.direction in ['OWED_TO_ME', 'I_OWE'] &&
+             data.counterparty is string && data.counterparty.size() >= 1 && data.counterparty.size() <= 60 &&
+             data.concept is string && data.concept.size() >= 1 && data.concept.size() <= 100 &&
+             data.totalAmount is number && data.totalAmount > 0 && data.totalAmount <= 1000000000 &&
+             data.paidAmount is number && data.paidAmount >= 0 && data.paidAmount <= data.totalAmount &&
+             data.status in ['PENDING', 'SETTLED'] &&
+             isValidYearMonth(data.yearMonth) &&
+             (!('dueDateMillis' in data) || (data.dueDateMillis is int && data.dueDateMillis > 0)) &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 300)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDebtPayment(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.amount is number && data.amount > 0 && data.amount <= 1000000000 &&
+             data.paymentDateMillis is int && data.paymentDateMillis > 0 &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 200)) &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidBudget(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 64 &&
+             data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 40 &&
+             isValidYearMonth(data.yearMonth) &&
+             data.limitAmount is number && data.limitAmount > 0 && data.limitAmount <= 1000000000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidReminder(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+             data.reminderType in ['DEBT_DUE', 'EXPENSE_REVIEW'] &&
+             data.targetName is string && data.targetName.size() >= 1 && data.targetName.size() <= 60 &&
+             data.frequency in ['ONCE', 'WEEKLY', 'MONTHLY'] &&
+             data.scheduledAtMillis is int && data.scheduledAtMillis > 0 &&
+             data.enabled is bool &&
+             (!('targetId' in data) || (data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128)) &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 200)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCategory(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 40 &&
+             data.iconKey is string && data.iconKey.size() >= 1 && data.iconKey.size() <= 40 &&
+             data.colorHex is string && data.colorHex.matches('^#[0-9A-Fa-f]{6}$') &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    match /users/{userId} {
+      match /expenses/{expenseId} {
+        allow get: if isOwner(userId) && isValidId(expenseId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(expenseId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'amount', 'categoryId', 'categoryName', 'expenseDateMillis', 'yearMonth', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'amount', 'categoryId', 'categoryName', 'expenseDateMillis', 'yearMonth', 'note', 'createdAt', 'updatedAt']) &&
+                         isValidExpense(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(expenseId) &&
+                         isValidExpense(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'amount', 'categoryId', 'categoryName', 'expenseDateMillis', 'yearMonth', 'note', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(expenseId);
+      }
+
+      match /debts/{debtId} {
+        allow get: if isOwner(userId) && isValidId(debtId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(debtId) &&
+                         incoming().keys().hasAll(['userId', 'direction', 'counterparty', 'concept', 'totalAmount', 'paidAmount', 'status', 'yearMonth', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'direction', 'counterparty', 'concept', 'totalAmount', 'paidAmount', 'status', 'dueDateMillis', 'yearMonth', 'note', 'createdAt', 'updatedAt']) &&
+                         isValidDebt(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(debtId) &&
+                         isValidDebt(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['paidAmount', 'status', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['direction', 'counterparty', 'concept', 'totalAmount', 'paidAmount', 'status', 'dueDateMillis', 'yearMonth', 'note', 'updatedAt'])
+                         );
+        allow delete: if isOwner(userId) && isValidId(debtId);
+
+        match /payments/{paymentId} {
+          allow get: if isOwner(userId) && isValidId(debtId) && isValidId(paymentId);
+          allow list: if isOwner(userId) && isValidId(debtId);
+          allow create: if isOwner(userId) &&
+                           isValidId(debtId) &&
+                           isValidId(paymentId) &&
+                           incoming().keys().hasAll(['userId', 'amount', 'paymentDateMillis', 'createdAt']) &&
+                           incoming().keys().hasOnly(['userId', 'amount', 'paymentDateMillis', 'note', 'createdAt']) &&
+                           isValidDebtPayment(incoming(), userId) &&
+                           (
+                             exists(/databases/$(database)/documents/users/$(userId)/debts/$(debtId)) ||
+                             existsAfter(/databases/$(database)/documents/users/$(userId)/debts/$(debtId))
+                           );
+          allow delete: if isOwner(userId) && isValidId(debtId) && isValidId(paymentId);
+        }
+      }
+
+      match /budgets/{budgetId} {
+        allow get: if isOwner(userId) && isValidId(budgetId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(budgetId) &&
+                         incoming().keys().hasAll(['userId', 'categoryId', 'categoryName', 'yearMonth', 'limitAmount', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'categoryId', 'categoryName', 'yearMonth', 'limitAmount', 'createdAt', 'updatedAt']) &&
+                         isValidBudget(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(budgetId) &&
+                         isValidBudget(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().categoryId == existing().categoryId &&
+                         incoming().yearMonth == existing().yearMonth &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['categoryName', 'limitAmount', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(budgetId);
+      }
+
+      match /reminders/{reminderId} {
+        allow get: if isOwner(userId) && isValidId(reminderId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'reminderType', 'targetName', 'frequency', 'scheduledAtMillis', 'enabled', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'reminderType', 'targetId', 'targetName', 'frequency', 'scheduledAtMillis', 'enabled', 'note', 'createdAt', 'updatedAt']) &&
+                         isValidReminder(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         isValidReminder(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['enabled', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'reminderType', 'targetId', 'targetName', 'frequency', 'scheduledAtMillis', 'enabled', 'note', 'updatedAt'])
+                         );
+        allow delete: if isOwner(userId) && isValidId(reminderId);
+      }
+
+      match /categories/{categoryId} {
+        allow get: if isOwner(userId) && isValidId(categoryId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(categoryId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'iconKey', 'colorHex', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'iconKey', 'colorHex', 'createdAt', 'updatedAt']) &&
+                         isValidCategory(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(categoryId) &&
+                         isValidCategory(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'iconKey', 'colorHex', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(categoryId);
+      }
+    }
+  }
+}

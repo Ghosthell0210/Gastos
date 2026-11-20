@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">PesoClaro</string>
+    <string name="currency_code_cup">CUP</string>
+    <string name="auth_welcome_title">Tus finanzas en CUP, siempre claras</string>
+    <string name="auth_welcome_subtitle">Controla tus gastos por categoría, deudas por cobrar o pagar, presupuestos mensuales y recordatorios con respaldo seguro en la nube.</string>
+    <string name="auth_sign_in_google">Continuar con Google</string>
+    <string name="auth_signing_in">Conectando cuenta...</string>
+    <string name="nav_overview">Resumen</string>
+    <string name="nav_expenses">Gastos</string>
+    <string name="nav_debts">Deudas</string>
+    <string name="nav_budgets">Metas</string>
+    <string name="nav_reports">Reportes</string>
+    <string name="notification_channel_name">Recordatorios PesoClaro</string>
+    <string name="notification_channel_desc">Alertas de vencimiento de deudas y revisión de gastos</string>
+    <string name="action_reminders">Recordatorios</string>
+    <string name="action_account">Cuenta y ajustes</string>
+    <string name="action_sign_out">Cerrar sesión</string>
+</resources>

@@ -1,0 +1,6 @@
+{
+  "name": "PesoClaro",
+  "description": "Control de gastos categorizados, deudas bidireccionales en CUP y reportes mensuales con respaldo en la nube.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
